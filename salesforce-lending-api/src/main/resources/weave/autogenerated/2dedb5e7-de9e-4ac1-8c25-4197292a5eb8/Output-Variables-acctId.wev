@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_2dedb5e7_de9e_4ac1_8c25_4197292a5eb8_Output_Variables_acctId = {|  |} | Null
+

@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+    <flow name="updateOwner" doc:id="40800bdf-4660-4f7b-94b0-0232f6bad81f">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="leadId">attributes.uriParams.'leadId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message" doc:id="11d6575c-76f0-4550-8ae0-a8f15f3b41e4" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Id:  vars.leadId,
+	OwnerId: payload.OwnerId
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:upsert doc:name="Upsert" doc:id="5b0b4798-a726-451d-812a-2ab5fab4b0fe" config-ref="leads-config" objectType="Lead" externalIdFieldName="Id"/>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Lead owner updated successfully"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="updateStatus" doc:id="e28061fd-1651-4e56-9ee3-f5c02dfac9c9">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="leadId">attributes.uriParams.'leadId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message" doc:id="791e096a-c29f-4917-871c-76defe37d094" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Id: vars.leadId,
+	Status: payload.status
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:upsert objectType="Lead" externalIdFieldName="Id" doc:name="Upsert" doc:id="b73a3db5-e6c2-4d9e-a31f-d8fae0478af4" config-ref="leads-config"/>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Lead status updated successfully"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+    <flow name="getLeads" doc:id="3cc90c5c-2611-47fd-b19d-2e8411fbb63d">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="leadId">attributes.uriParams.'leadId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message" doc:id="81040fdb-22a9-4ed9-9f1f-287604ae2b8b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA["Select Id,Name,Address,Company,Email,OwnerId,Status,MobilePhone,Phone from Lead where Id = '" ++ vars.leadId ++ "'"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:query doc:name="Query" doc:id="5207c438-3148-4379-9625-779e46b27e33" config-ref="leads-config">
+			<salesforce:salesforce-query ><![CDATA[#[payload]]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="7a29570d-42b5-4fcb-a544-2c1e0a68e7c8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+skipNullOn="everywhere"
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="getLeadsBasedOnOwnerId" doc:id="659441bb-9ac6-453a-94cd-aa67d919a14d">
+        <ee:transform>
+            <ee:variables>
+                <ee:set-variable variableName="ownerId">attributes.uriParams.'ownerId'</ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message" doc:id="ebd46de3-63e4-43ee-9d51-fe3eab0ec265" >
+			<ee:message >
+				<ee:set-payload ><![CDATA["Select Id,Name,Address,Company,Email,OwnerId,Status,MobilePhone,Phone from Lead where ownerId = '" ++ vars.ownerId ++ "'"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:query doc:name="Query" doc:id="4561228a-c53e-4b72-8d8b-b6561838ab93" config-ref="leads-config">
+			<salesforce:salesforce-query ><![CDATA[#[payload]]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="a06fb67f-ce36-405b-897d-4fd67eb0a926" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+skipNullOn="everywhere"
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="postLeads" doc:id="afee510e-c1e1-485d-85a8-66dc11b8bab3">
+        <ee:transform doc:name="Transform Message" doc:id="fba7c6ac-2d0d-4e04-9fc7-805f2e2752b9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	LastName: payload01.lastname,
+	FirstName: payload01.firstname,
+	Company: payload01.company,
+	Street: payload01.street,
+	City: payload01.city,
+	State: payload01.state,
+	PostalCode: payload01.zipcode,
+	Country: payload01.country,
+	Phone: payload01.phone,
+	Email: payload01.email,
+	Status: payload01.status,
+	NumberOfEmployees: payload01."no of employees" as Number,
+	SSN__c: payload01.SSN
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:create doc:name="Create" doc:id="d5ea2083-a5b0-421f-9815-7f64da7063d0" config-ref="leads-config" type="Lead"/>
+		<ee:transform>
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Lead created successfully"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+</mule>

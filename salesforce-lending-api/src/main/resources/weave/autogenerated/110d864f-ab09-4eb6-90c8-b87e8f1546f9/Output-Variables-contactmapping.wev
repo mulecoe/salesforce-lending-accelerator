@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_110d864f_ab09_4eb6_90c8_b87e8f1546f9_Output_Variables_contactmapping = Array<{|  LastName: Any,   FirstName: Any,   MiddleName: Any,   AccountId: Null,   Phone: Any,   Email: Any,   MailingStreet: Any,   MailingCity: Any,   MailingState: Any,   MailingPostalCode: Any,   MailingCountry: Any|}>
+

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:mongo="http://www.mulesoft.org/schema/mule/mongo"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/mongo http://www.mulesoft.org/schema/mule/mongo/current/mule-mongo.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<salesforce:sfdc-config name="finanical-cloud-services" doc:name="Salesforce Config" doc:id="642347e5-3862-4e99-a72e-b19471de533a" >
+		<salesforce:basic-connection username="${sffinancial.username}" password="${sffinancial.password}" securityToken="${sffinancial.token}" />
+	</salesforce:sfdc-config>
+	<salesforce:sfdc-config name="leads-config" doc:name="Salesforce Config" doc:id="02d754d0-e16f-4499-aba8-ce0af7fcf46e" >
+		<salesforce:basic-connection username="${sf.username}" password="${sf.password}" securityToken="${sf.token}" />
+	</salesforce:sfdc-config>
+	<mongo:config name="formcollection-config" doc:name="MongoDB Config" doc:id="8411a4e1-79cf-4fff-95d9-5c5a12d1567a" >
+		<mongo:connection-string-connection connectionString="${mongo.formcollection}" />
+	</mongo:config>
+	<mongo:config name="loan-details-config" doc:name="MongoDB Config" doc:id="64fd9842-ae97-4566-8c7f-5a44ec36aeb2" >
+		<mongo:connection-string-connection connectionString="${mongo.loandetails}" />
+	</mongo:config>
+	<http:request-config name="comms" doc:name="HTTP Request configuration" doc:id="561f53c8-16fd-4c87-a38f-58eb115fd4f4" basePath="/${commsaccelerator.basePath}" >
+		<http:request-connection host="${commsaccelerator.url}" />
+	</http:request-config>
+	<http:request-config name="storage" doc:name="HTTP Request configuration" doc:id="7daae3de-2c0a-4541-aaca-19d845f9f3b6" basePath="/${storage.basePath}" >
+		<http:request-connection host="${storage.url}" />
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="577b0f8a-c756-4171-81f8-f765dc940e85" file="dev.properties" />
+	<configuration-properties doc:name="Configuration properties" doc:id="798a218c-cabc-4267-bc9d-d8f6cddec92e" file="config.yaml" />
+	<http:request-config name="plaid" doc:name="HTTP Request configuration" doc:id="a7ff3db2-fd38-438d-b82d-0f108d86df61" basePath="/${plaidaccelerator.basePath}">
+		<http:request-connection connectionIdleTimeout="900000000" host="${plaidaccelerator.url}"/>
+	</http:request-config>
+	<mongo:config name="LendingAcc" doc:name="MongoDB Config" doc:id="c426bb9d-73db-4b62-b1e1-1be21a031833" >
+		<mongo:connection-string-connection connectionString="${mongo.LendingAcc}" />
+	</mongo:config>
+</mule>

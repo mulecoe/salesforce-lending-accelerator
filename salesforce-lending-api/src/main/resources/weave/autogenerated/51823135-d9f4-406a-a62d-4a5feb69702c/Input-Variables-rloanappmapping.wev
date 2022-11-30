@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_51823135_d9f4_406a_a62d_4a5feb69702c_Input_Variables_rloanappmapping = Array<{|  Name: String,   OpportunityId: Null,   Status: String,   MortgageProgramType: String,   LoanPurpose: Any,   LotOriginalCost: Any,   InterestRate: Any,   NativeLandTenure: String,   AmortizationTerm: Any,   AmortizationType: String|}>
+

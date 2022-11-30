@@ -1,0 +1,6 @@
+%dw 2.0
+
+type auto_1813a830_e140_491b_bdd4_9cf310affa02_Input_Variables_plaidstatementInput = {|  |} {"typeAlias": "Object",
+"class": "java.lang.Object",
+"typeId": "java.lang.Object"}
+

@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_fcd93fcc_6420_4ea9_9adb_118f3bc75527_Input_Variables_loanApplicantMapping = Array<{|  Name: Any,   ContactId: Null,   LoanApplicationId: Null,   MaritalStatus: Any,   DependentCount: Any,   DependentsAge: String,   GenderType: Any,   CitizenshipStatus: Any,   SSN__c: Any,   SSN_Verified__c: Boolean,   BorrowerType: Any|}>
+

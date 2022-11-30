@@ -1,0 +1,93 @@
+<html>
+    <head>
+        <style>
+            html, body {
+                margin: 0; padding: 0;
+                background: #fff;
+                color: #333;
+                font: 12px/15px Verdana, sans-serif;
+            }
+            #container {
+                max-width: 520px;
+                margin: 30px;
+                padding: 0px;
+                
+            }
+            #content h2 {
+                font: bold 16px/16px Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                margin-bottom: 12px;
+            }
+            #header {
+				
+				height: 45px;
+				padding-bottom: 0;
+				color: #e47911;
+				position:relative;
+				margin-bottom: 22px;
+			}
+			.center {
+			font:  9px/9px Verdana, sans-serif ;
+				position: absolute;
+				left: 24%;
+				top: 95%;
+				transform: translate(-50%, -50%);
+
+				padding: 20px 75px;
+				}
+            #header h1 {
+				font-size: 12px;
+				line-height: 12px;
+				margin: 0; padding: 0px 5px -0px 10px;
+				position: absolute;
+				bottom: 0;
+				right: 0;
+			}
+            #content {
+                padding: 12px;
+                background: #ecf5fb;
+                border: 1px solid #c9e1f4;
+                -moz-border-radius: 10px;
+                -webkit-border-radius: 10px;
+                border-radius: 10px;
+            }
+            p {
+                margin-top: 0;
+                margin-bottom: 12px;
+            }
+            .error {
+                color: #900;    
+            }
+            .success {
+                color: #090;
+            }
+            code {
+                font-style: normal;
+                color: #000;
+            }
+            abbr {
+                font-weight: bold;
+            }
+            a:visited, a:hover {
+                color: #004b91;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container">
+            <div id="header">
+                <img src="https://www.jotform.com/uploads/bronnv8/form_files/BrooksBank.6372244b737fe2.29841539.png" alt="BOB"  width="70" height="67">
+				<div class="center">
+					<p style="color: black;" ><b>Brooks Bank</b></p>
+					<p style="color: black;">100 North<br>Tryon Street Charlotte,<br>North Carolina 28255</p>
+				
+				</div>
+				<h1>Brooks Bank</h1>
+            </div>
+        <div id="content">
+            <h2 id="status">Your form has been Submitted with reference no</br> "#[payload]".</h2>
+        </div>
+        </div>
+    </body>
+</html>

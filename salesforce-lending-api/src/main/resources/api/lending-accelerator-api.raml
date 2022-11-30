@@ -1,0 +1,119 @@
+#%RAML 1.0
+title: lending-accelerator-api
+
+types:
+  postleads: !include datatypes/postLeads.raml
+  updateowner: !include datatypes/updateOwner.raml
+  updatestatus: !include datatypes/updatestatus.raml
+
+/lending:
+  /loanapplicant:
+    get:
+      queryParameters:
+        id:
+          required: true
+      responses:
+        200:
+          body:
+            application/json:
+              example: !include examples/getLoanapplicant.json
+  /email:
+    get:
+      queryParameters:
+        email:
+          required: true
+      responses:
+        200:
+          body:
+            application/json:
+              example: !include examples/loanemail.json
+        
+  /leads:
+    post:
+      body:
+        application/json:
+          type: array
+          items: postleads
+          example: !include examples/postleads.json
+      responses:
+        200:
+          body:
+            application/json:
+              example:
+                {
+                  "message" : "Lead created successfully"
+                }
+    
+                        
+        
+    /{leadId}:
+      get:
+        responses:
+          200:
+            body:
+              application/json:
+                
+      /status:
+        put:
+          body:
+            application/json:
+              type: updatestatus
+              example: !include examples/updateStatus.json
+          responses:
+            200:
+              body:
+                application/json:
+                  example:
+                    {
+                      "message" : "Lead status updated successfully"
+                    }
+      /owner:
+        put:
+          body:
+            application/json:
+              type: updateowner
+              example: !include examples/updateOwner.json
+          responses:
+            200:
+              body:
+                application/json:
+                  example:
+                    {
+                      "message" : "Lead owner updated successfully"
+                    }
+
+    /owner:
+      /{ownerId}:
+        get:
+          responses:
+            200:
+              body:
+                application/json:
+
+  /documents:
+    post:
+      body:
+        multipart/form-data:
+      responses:
+        201:
+          body:
+            application/json:
+              example:
+                {
+                  "message" : "Documents inserted successfully."
+                }
+
+    get:
+      queryParameters:
+        id:
+          required: true
+  
+
+
+        
+
+  
+
+        
+
+      

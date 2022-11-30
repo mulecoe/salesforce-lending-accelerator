@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <http:listener-config name="lending-accelerator-api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="lending-accelerator-api-config" api="resource::551efc85-4561-403b-9bba-8e45bdf1a723:lending-accelerator-api:1.0.5:raml:zip:lending-accelerator-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="lending-accelerator-api-main">
+        <http:listener config-ref="lending-accelerator-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="lending-accelerator-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="lending-accelerator-api-console">
+        <http:listener config-ref="lending-accelerator-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="lending-accelerator-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\lending\leads\(leadId)\owner:application\json:lending-accelerator-api-config">
+        <flow-ref doc:name="updateOwner" doc:id="98eebc4c-b854-4a9d-986f-1ccd6b11a6f5" name="updateOwner" />
+    </flow>
+    <flow name="put:\lending\leads\(leadId)\status:application\json:lending-accelerator-api-config">
+        <flow-ref doc:name="updateStatus" doc:id="e9f07539-e98b-4767-9e25-a0d6670a983c" name="updateStatus" />
+    </flow>
+    <flow name="get:\lending\documents:lending-accelerator-api-config">
+        <flow-ref doc:name="getContentVersionByParentIdFlow" doc:id="7f07a5f2-30e3-4892-961c-84c4ebae78aa" name="getContentVersionByParentIdFlow" />
+    </flow>
+    <flow name="get:\lending\loanapplicant:lending-accelerator-api-config">
+        <flow-ref doc:name="salesforce-aggregator-apiFlow" doc:id="2c502349-8921-46f4-8965-aeb462b3edc6" name="salesforce-aggregator-apiFlow" />
+    </flow>
+    <flow name="get:\lending\leads\(leadId):lending-accelerator-api-config">
+        <flow-ref doc:name="getLeads" doc:id="9d83e68d-1211-4411-97df-6fd4a8009e33" name="getLeads" />
+    </flow>
+    <flow name="get:\lending\leads\owner\(ownerId):lending-accelerator-api-config">
+        <flow-ref doc:name="getLeadsBasedOnOwnerId" doc:id="2986a837-aacd-45fc-8a03-4ee7d1bcb07e" name="getLeadsBasedOnOwnerId" />
+    </flow>
+    <flow name="post:\lending\documents:multipart\form-data:lending-accelerator-api-config">
+        <flow-ref doc:name="uploadDoc" doc:id="5ddc5a6f-97a6-4ea8-8b8e-5529e0a03149" name="uploadDoc" />
+    </flow>
+    <flow name="post:\lending\leads:application\json:lending-accelerator-api-config">
+        <flow-ref doc:name="postLeads" doc:id="ee42aa5c-f730-4742-9b57-bea98a08fcee" name="postLeads" />
+    </flow>
+    <flow name="get:\lending\email:lending-accelerator-api-config" doc:id="034ed5b6-5209-4d11-9959-8b125ca5c3d1">
+        <flow-ref doc:name="salesforce-aggregator-Emailapi" doc:id="b3091ed7-0f95-4c54-a6ec-1d87cb73506c" name="salesforce-aggregator-Emailapi" />
+    </flow>
+    <flow name="post:\loanform\submit:application\json:lending-accelerator-api-config">
+        <flow-ref doc:name="submit-formdata-Flow" doc:id="0f377a86-7f1c-4a2f-b6cc-f27aa7e3f2d4" name="submit-formdata-Flow" />
+    </flow>
+</mule>

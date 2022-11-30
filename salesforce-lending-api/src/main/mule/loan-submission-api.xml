@@ -1,0 +1,828 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:mongo="http://www.mulesoft.org/schema/mule/mongo"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/mongo http://www.mulesoft.org/schema/mule/mongo/current/mule-mongo.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd">
+	
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="8322475d-3704-44da-8feb-a53b65c8ae2f" basePath="/api">
+		<http:request-connection host="storage-process-api.sg-s1.cloudhub.io" />
+	</http:request-config>
+	<http:request-config name="sfdocumentsrequest" doc:name="HTTP Request configuration" doc:id="b5d8eea1-b2b8-4032-897a-dd9d73260c9e" basePath="/api" >
+		<http:request-connection host="salesforce-document-api.sg-s1.cloudhub.io" />
+	</http:request-config>
+	<global-property doc:name="Global Property" doc:id="ada14269-619c-4f1c-8bf2-7bb95332d5d0" name="env" value="dev" />
+	<configuration-properties doc:name="Configuration properties" doc:id="a25cb10d-96f7-407c-bc0d-bcd5a4f39e55" file="dev.properties" />
+	<flow name="objectCreation" doc:id="fc108e17-c737-4c82-871d-9df4f722a55b" >
+		<ee:transform doc:name="vars.inputPayload" doc:id="b405d3ff-2db9-40c7-95b3-250df60991d2">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="sfdc-id"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	mongoDB_id : uuid()
+	
+}]]></ee:set-variable>
+				<ee:set-variable variableName="transferstatus"><![CDATA["In progress"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<mongo:insert-document doc:name="create sfdc-id" doc:id="928c8165-ca3e-4821-99fb-fdb9fe6b1f93" collectionName="${mongo.loandetailscollectionname}" target="mongodb" config-ref="loan-details-config">
+			<mongo:document ><![CDATA[#[vars."sfdc-id"]]]></mongo:document>
+		</mongo:insert-document>
+		<flow-ref doc:name="createAccount" doc:id="c8b09c73-e2f2-4948-b4b4-d5a00e5e75f3" name="createAccount"/>
+		<flow-ref doc:name="createcontact" doc:id="4464f5c6-719f-4d04-9d89-96311ba5ab68" name="createcontact"/>
+		<flow-ref doc:name="createOpportunity" doc:id="e7d640fd-9953-432d-b7dd-0bcb7446a3b4" name="createOpportunity" />
+		<ee:transform doc:name="variables" doc:id="7a203a43-ac29-456d-b849-8794e668a679">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="rloanappmapping"><![CDATA[%dw 2.0
+output application/java
+fun ResidentialLoanMapping(obj:Object) = ([{
+Name: uuid(),
+OpportunityId: vars.oppId,
+"Status": "New",
+"MortgageProgramType": "Conventional",
+"LoanPurpose": obj."loan-reason",
+"LotOriginalCost": obj."loan-amount",
+"InterestRate": obj."loan-intr-rate",
+"NativeLandTenure": "Fee Simple(On a reservation)",
+"AmortizationTerm":obj."loan-tenure",
+"AmortizationType": "Fixed Rate"
+}])
+---
+ResidentialLoanMapping(payload)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="createResedentialLoanApplication" doc:id="0e6262d0-1d78-40ea-9ca8-169597469771" name="createResedentialLoanApplication" />
+		<flow-ref doc:name="createLoanApplicant" doc:id="82758a03-b60e-41bf-84a2-5c4441b34104" name="createLoanApplicant" />
+		<ee:transform doc:name="vars.emp,vars.declaration,vars.address" doc:id="2e81cb92-773e-4e73-a836-8e70ed4cfb4d">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="address"><![CDATA[%dw 2.0
+output application/java
+fun LoanApplicantAddrMapping(obj:Object) = ([{"Name": obj.fname ++ " " ++ obj.mname ++ " " ++ obj.lname,
+"LoanApplicantId": vars.loanappId,
+"ResidenceStreet": obj.'permaddr-line',
+"ResidenceCity": obj.'permaddr-city',
+"ResidenceState": obj.'permaddr-state',
+"ResidencePostalCode":obj.'permaddr-zip',
+ResidenceCountry: obj."permaddr-country",
+"Residence_Address_Years__c" : obj.'permaddr-years',
+"Previous_Address__c": obj."prevaddr-line" ++ " " ++ obj."prevaddr-city" ++ " " ++
+
+  obj."prevaddr-state" ++ " "  ++ " "  ++ " " ++
+
+  obj."prevaddr-country",
+  Previous_Address_Years__c: obj."prevaddr-years",
+  "CorrespondenceAddress__c": obj."correspaddr-line" ++ " " ++
+
+  obj."correspaddr-city" ++ " " ++
+
+  obj."correspaddr-state" ++ " " ++
+
+  obj."correspaddr-zip" ++ " "  ++ " " ++
+
+  obj."correspaddr-country",
+  CorrespondenceAddress_Years__c: obj."correspaddr-years",
+  CorrespondenceAddress_Line__c : obj."correspaddr-line",
+  CorrespondenceAddress_State__c : obj."correspaddr-state",
+  CorrespondenceAddress_City__c : obj."correspaddr-city",
+  CorrespondenceAddress_Country__c : obj."correspaddr-country",
+  CorrespondenceAddress_Zip__c : obj."correspaddr-zip",
+  Previous_Address_Line__c : obj."prevaddr-line",
+  Previous_Address_City__c : obj."prevaddr-city",
+  Previous_Address_State__C : obj."prevaddr-state",
+  Previous_Address_Zipcode__c: obj."prevaddr-zip",
+  Previous_Address_Country__c : obj."prevaddr-country"
+  
+  
+
+}])
+---
+LoanApplicantAddrMapping(payload)
+
+]]></ee:set-variable>
+				<ee:set-variable variableName="declrataion"><![CDATA[%dw 2.0
+output application/java
+fun LoanApplicantDecMapping(obj:Object) = ([{
+	"Name": obj.fname ++ " " ++ obj.mname ++ " " ++ obj.lname,
+	"LoanApplicantId": vars.loanappId,
+	"BorrowedAmount": obj."loan-amount",
+	"HasOutstandingJudgement": (if(obj.'dec-outstanding-judgement' == "yes") 
+"true"
+ else "false") as Boolean,
+	"HasDeclaredBankruptcy": (if(obj.'dec-declared-bankruptcy' == "yes") 
+"true"
+ else "false") as Boolean,
+	"HasUndisclAddlPropApp":   (if(obj.'dec-undesclosed-loan' == "yes") 
+"true"
+ else "false") as Boolean,
+	
+	"IsPartyToLawsuit": (if(obj.'dec-party-to-lawsuit' == "yes") 
+"true"
+ else "false") as Boolean,
+	"HasPropertyForeclosed":   (if(obj.'dec-foreclosed-property' == "yes") 
+"true"
+ else "false") as Boolean,
+	"BankruptcyType": obj.'dec-bankruptcy type',
+	Loan_Defaulter__c: (if(obj.'loan-defaulter'=="yes") "true" else "false") as Boolean,
+	Borrowed_Before__c : (if(obj.'borrowed-before'=="yes") "true" else "false") as Boolean
+	
+}])
+---
+LoanApplicantDecMapping(payload)
+]]></ee:set-variable>
+				<ee:set-variable variableName="emp"><![CDATA[%dw 2.0
+output application/java
+fun LoanApplicantEmpMapping(obj:Object) = ([{
+	"Name": obj.fname ++ " " ++ obj.mname ++ " " ++ obj.lname,
+	"LoanApplicantId": vars.loanappId,
+	"EmployerName" : obj.'employment-employer-name',
+    "JobTitle" : obj.'employment-job-title',
+    "CurrentJobYearCount" : obj.'employment-years' as Number,
+    "EmployerPhone" : obj.'employment-workphone',
+    "Otherincome_Source__c" :obj.'employment-otherincome-source',
+    "MonthlyIncome" : obj.'employment-monthly-income',
+    "MonthlyBaseIncomeAmount" : obj.'employment-monthly-base-income',
+    "MonthlyOvertimeAmount" : obj.'employment-monthly-overtime-amnt',
+    "MonthlyBonusAmount" : obj.'employment-monthly-bonus-amnt',
+    "MonthlyCommissionAmount" : obj.'employment-monthly-comission-amnt',
+    "MonthlyMilitaryEntlAmt": obj.'employment-monthly-military-ent-amnt',
+    "MonthlyOtherIncomeAmount" : obj.'employment-monthly-other-amnt',
+    "EmployerAddress" : obj.'residence-desc',
+    IsSelfEmployed : (if(obj.'selfemployed' == "Yes") "True" else "False") as Boolean,
+    Monthlyrent_Mortgage__c: obj."monthlyrent-mortgage",
+    Employment_Type__c: obj."employment-type",
+    EmployerPhone: obj."7583538538",
+    Employment_prevyears__c: obj.'employment-prevyears',
+    Employment_Occupation__c: obj.'employment-occup'
+    
+}])
+---
+LoanApplicantEmpMapping(payload)
+
+
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<scatter-gather doc:name="Scatter-Gather" doc:id="c2aed7ef-d19f-4e85-aa71-a37b52ddfd25">
+			<route>
+				<salesforce:create type="LoanApplicantAddress" doc:name="Create Loan address" doc:id="6f023a17-92ce-4396-b3eb-c53c28c95860" target="loanaddrId" config-ref="finanical-cloud-services" targetValue="#[payload.items.id reduce $$]">
+					<salesforce:records><![CDATA[#[vars.address]]]></salesforce:records>
+				</salesforce:create>
+			</route>
+			<route>
+				<salesforce:create type="LoanApplicantDeclaration" doc:name="Create Loan Declaration" doc:id="b2790e98-1a19-4e2a-a3cf-b2536ac1192c" target="declareId" config-ref="finanical-cloud-services" targetValue="#[payload.items.id reduce $$]">
+					<salesforce:records><![CDATA[#[vars.declrataion]]]></salesforce:records>
+				</salesforce:create>
+			</route>
+			<route>
+						<salesforce:create type="LoanApplicantEmployment" doc:name="Create loan emp" doc:id="6765e1db-52e7-483a-9b31-b0f7a552dd84" target="empId" readTimeoutUnit="HOURS" config-ref="finanical-cloud-services" targetValue="#[payload.items.id reduce $$]">
+					<salesforce:records><![CDATA[#[vars.emp]]]></salesforce:records>
+				</salesforce:create>
+			</route>
+		</scatter-gather>
+		<choice doc:name="Choice" doc:id="1f32d015-06a8-4655-9215-0f87fbca056b" >
+			<when expression="#[isEmpty(vars.loanaddrId) or isEmpty(vars.declareId) or isEmpty(vars.empId)]">
+				<raise-error doc:name="Raise error" doc:id="7151601b-83a7-40e6-83d1-f199f35789e0" type="ANY:NOTCREATED" description="Loan address,declaration or employee related data is not stored."/>
+			</when>
+			<otherwise >
+				<set-variable value="Transfer Completed" doc:name="transferstatus" doc:id="78a94156-f8c5-4717-8090-cad3f8b56913" variableName="transferstatus" />
+				<flow-ref doc:name="loan-applicationFlow" doc:id="e167f156-59e4-495f-8cf7-df8b1aa1637b" name="loan-applicationFlow"/>
+				<flow-ref doc:name="mongoUpdate" doc:id="0bf5c417-43f5-4666-9c32-98a41f521a9f" name="mongoUpdate" />
+				<flow-ref doc:name="emailflow" doc:id="c0726bd6-ac0e-459a-91e0-2438b0b7c417" name="emailflow" />
+				<logger level="INFO" doc:name="vars.loanappId" doc:id="73f31b2d-fbc0-4146-a773-72b514b1fc8b" message='#["Loan Application Id:" ++ vars.applicationId]' />
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="545d1adc-feb2-4cc3-9b77-00559c065b79" >
+				<ee:transform doc:name="payload" doc:id="5c61de48-d406-4e7a-833f-178e08537764" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+
+	"errored" : {
+		errorcode: error.description,
+		errortype: error.errorType.identifier
+		
+	}
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<mongo:update-documents collectionName="${mongo.loandetailscollectionname}" doc:name="Update error message in mongodb" doc:id="55e55f6e-55ab-42eb-9720-bb62cf364d9f" config-ref="loan-details-config">
+					<mongo:query ><![CDATA[#[vars.'sfdc-id']]]></mongo:query>
+				</mongo:update-documents>
+				<flow-ref doc:name="emailflow" doc:id="7442c4cc-9869-455c-aba9-156106173a1b" name="emailflow"/>
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<sub-flow name="createLoanApplicant" doc:id="0e28b4fa-e3f9-49bd-a7b3-7ee712441dc6" >
+		<ee:transform doc:name="vars.loanApplicantMapping" doc:id="c36cacc7-7a05-4da2-85b5-b1d6abe5c10e" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="loanApplicantMapping" ><![CDATA[%dw 2.0
+output application/java
+fun LoanApplicantMapping(obj:Object) = ([{"Name": obj.fname ++ " " ++ obj.mname ++ " " ++ obj.lname,
+"ContactId": vars.contactId,
+"MaritalStatus": obj."marital-status",
+LoanApplicationId: vars.appId,
+"DependentCount":obj."dependentscount" as Number,
+"DependentsAge":obj.'dependents-ages',
+"GenderType": obj."gender",
+Other_Gender__c: obj.'gender-other',
+"CitizenshipStatus": obj."citizenship",
+"SSN__c": obj."ssn",
+"HasMilitaryService" : "True" as Boolean,
+PreferredLanguage : if(obj.'preferred-language' == "English") "English" else "Other",
+"Other_Preffered__c" : if(obj.'preffered-language' == "Other") obj.'preferred-language-other-name' else null,
+"Permanent_resident_alien_number__c" : obj.'citizenship-alien-number',
+Citizenship_Expiry_Date__c : obj.'citizenship-expdate'
+}])
+---
+LoanApplicantMapping(vars.jsondata)
+
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create doc:name="Create loanApplicant" doc:id="32a594cf-8dfb-441f-8d13-04730c795756" type="LoanApplicant" target="loanappId" config-ref="finanical-cloud-services" targetValue="#[payload.items.id reduce $$]">
+			<salesforce:records ><![CDATA[#[vars.loanApplicantMapping]]]></salesforce:records>
+		</salesforce:create>
+		<choice doc:name="Choice" doc:id="6799a0d7-6641-438f-af8a-9eb3d553e128" >
+			<when expression="#[isEmpty(vars.loanappId)]">
+				<raise-error doc:name="Raise error" doc:id="198d543d-b46c-46c2-b1c3-7e81363b0e43" type="NOT:NOTCREATED" description="Loan applicant not created"/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="mongoUpdate" doc:id="3de2b8b1-3519-49fa-bb9a-f2f8d7e2d2d7" name="mongoUpdate" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="loan-applicationFlow" doc:id="fcd93fcc-6420-4ea9-9adb-118f3bc75527" >
+		<ee:transform doc:name="vars.applicationMapping" doc:id="cadf8544-a276-4f1c-82cc-a40fdfe30a27" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="applicationMapping" ><![CDATA[%dw 2.0
+output application/java
+fun LoanApplicationMapping(obj:Object) = ([{"Name": obj.fname ++ " " ++ obj.mname ++ " " ++ obj.lname,
+"Contact__c": vars.contactId,
+"Lead_Id__c" : obj.'leadId',
+"Loan_Applicant__c" : vars.loanappId,
+"Loan_Applicant_Address__c" : vars.loanaddrId,
+"Loan_Applicant_Declaration__c" : vars.declareId,
+"Loan_Applicant_Employment__c" : vars.empId,
+"Loan_Purpose__c" : obj."loan-reason",
+"Marital_status__c": obj."marital-status",
+"No_of_Dependents__c":obj."dependentscount",
+"Dependent_s_Age__c":obj.'dependents-ages',
+"SSN__c": obj."ssn",
+"Borrower_Type__c" : obj.'borrower-type',
+"Interest_Rate__C" : obj.'loan-intr-rate',
+"Loan_Duration_in_Months__c" : obj."loan-tenure",
+"CitizenshipStatus__c" : obj.'citizenship',
+"Application_Reference_No__c" : obj.'loan_reference_id'
+}])
+---
+LoanApplicationMapping(vars.jsondata)
+
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create doc:name="Create Loan Application" doc:id="cff87f22-791d-423e-a8d8-cf46ccf90ee7" config-ref="finanical-cloud-services" type="Loan_Application__c" target="applicationId" targetValue="#[payload.items.id reduce $$]">
+			<salesforce:records ><![CDATA[#[vars.applicationMapping]]]></salesforce:records>
+		</salesforce:create>
+		<choice doc:name="Choice" doc:id="902a32fc-0943-4c73-aacd-a84c3816aedf" >
+			<when expression="#[isEmpty(vars.applicationId)]">
+				<raise-error doc:name="Raise error" doc:id="06eea5aa-f3a3-4e82-bb1a-527de4d9d367" type="ANY:NOTCREATED" description="Loan application not created"/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="mongoUpdate" doc:id="a23265f8-219e-425f-85b8-28051bf9543a" name="mongoUpdate"/>
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="createResedentialLoanApplication" doc:id="110d864f-ab09-4eb6-90c8-b87e8f1546f9" >
+		<ee:transform doc:name="vars.rloanapplicationmapping" doc:id="9ed410d7-5849-47f8-a21d-7ea3aefdc016" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="rloanapplicationmapping" ><![CDATA[%dw 2.0
+output application/java
+fun ResidentialLoanMapping(obj:Object) = ([{
+Name: uuid(),
+OpportunityId: vars.oppId,
+"Status": "New",
+"MortgageProgramType": "Conventional",
+"LoanPurpose": obj."loan-reason",
+"LotOriginalCost": obj."loan-amount",
+"InterestRate": obj."loan-intr-rate",
+"NativeLandTenure": "Fee Simple(On a reservation)",
+"AmortizationTerm":obj."loan-tenure",
+"AmortizationType": "Fixed Rate"
+}])
+---
+ResidentialLoanMapping(vars.jsondata)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create doc:name="Create resedential Loan Application" doc:id="faa08f3e-3213-4348-ac02-d85605c301c0" type="ResidentialLoanApplication" target="appId" targetValue="#[payload.items.id reduce $$]" config-ref="finanical-cloud-services">
+			<salesforce:records ><![CDATA[#[vars.rloanapplicationmapping]]]></salesforce:records>
+		</salesforce:create>
+		<choice doc:name="Choice" doc:id="7058b204-5804-4313-bee4-7dceba7da504" >
+			<when expression="#[isEmpty(vars.appId)]">
+				<raise-error doc:name="Raise error" doc:id="b1f98948-fb49-4027-b7e9-26b455eabb63" type="NOT:NOTCREATED" description="Resedential Loan application not created"/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="mongoUpdate" doc:id="eb6fd9d8-792a-42b6-9d57-9a28cf56eff6" name="mongoUpdate" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="createOpportunity" doc:id="f1b9de91-2183-45af-ade9-f65b9b8d4371" >
+		<ee:transform doc:name="vars.oppmapping" doc:id="dda9095b-d7c5-47f8-9fd7-27aaf7afc3a9" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="oppmapping" ><![CDATA[%dw 2.0
+output application/java
+fun oppurtunityMapping(obj:Object) = ([{
+"Name": obj.fname ++ " " ++ obj.mname ++ " " ++ obj.lname,
+"CloseDate": now() as Date {format: "YYYY-MM-dd" },
+StageName: "Qualification",
+AccountId: vars.acctId
+}])
+---
+oppurtunityMapping(vars.jsondata)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create type="Opportunity" doc:name="Create Opportunity" doc:id="0e7ec0ee-acea-4385-994a-40d6b6e08589" target="oppId" targetValue="#[payload.items.id reduce $$]" config-ref="finanical-cloud-services">
+			<salesforce:records ><![CDATA[#[vars.oppmapping]]]></salesforce:records>
+		</salesforce:create>
+		<choice doc:name="Choice" doc:id="145f3416-33c4-4b55-a037-bf2a95b30a3a" >
+			<when expression="#[isEmpty(vars.oppId)]">
+				<raise-error doc:name="Raise error" doc:id="ab2bdbef-22f1-48fe-a69b-1f8250df5ff7" type="NOT:NOTCREATED" description="Opportunity is not created."/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="mongoUpdate" doc:id="5c3560c5-96d9-4284-81f3-a47886ccb837" name="mongoUpdate" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="createcontact" doc:id="fd09ef76-ebf1-4b0d-8ba2-5c876e4d2bc6" >
+		<ee:transform doc:name="vars.referenceContact" doc:id="81724f26-1c89-4299-9f44-d83fc7aecbaa">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="referenceContact"><![CDATA[%dw 2.0
+output application/java
+fun ContactMapping(obj:Object) = ([
+
+    {  
+
+       LastName: obj.'ref-lname',
+       FirstName: obj.'ref-fname',
+       MiddleName: obj.'ref-mname',
+       Type__c : "Reference contact",
+       Phone: obj."ref-permaddr-phone",
+       "MailingStreet":  obj."ref-permaddr",
+       "MailingCity": obj."ref-permaddr-city",
+       "MailingState": obj."ref-permaddr-state",
+         "MailingPostalCode": obj."ref-permaddr-zip",
+  "AccountId" : vars.acctId,
+  "MobilePhone" : obj.'ref-permaddr-phone-alt'
+
+       }
+
+])
+
+---
+
+ContactMapping(vars.jsondata)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create type="Contact" doc:name="Create reference contact" doc:id="1dffe935-b9f6-4da6-82bb-0388fbb350ec" target="refcontactid" targetValue="#[payload.items.id reduce $$]" config-ref="finanical-cloud-services">
+					<salesforce:records><![CDATA[#[vars.referenceContact]]]></salesforce:records>
+				</salesforce:create>
+		<ee:transform doc:name="contact mappings" doc:id="0d3e2a91-08ee-4d0a-88af-f032e67e90f0">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="contactmapping"><![CDATA[%dw 2.0
+output application/java
+fun ContactMapping(obj:Object) = ([
+
+    {  
+
+       LastName: obj.lname,
+       FirstName: obj.fname,
+       MiddleName: obj.mname,
+       Type__c : "Employee contact",
+       Phone: obj."phonenum-primary",
+       OtherPhone : obj.'phonenum-alt',
+       Email: obj."email-primary",
+       "MailingStreet":  obj."permaddr-line",
+
+       "MailingCity": obj."permaddr-city",
+
+  "MailingState": obj."permaddr-state",
+
+  "MailingPostalCode": obj."permaddr-zip",
+
+  "MailingCountry":obj."permaddr-country",
+  "AccountId" : vars.acctId,
+  'Birthdate' : obj.'dob' as Date,
+  "Reference_Contact__c" : vars.'refcontactid'
+  
+
+       }
+
+])
+
+---
+
+ContactMapping(vars.jsondata)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create type="Contact" doc:name="Create contact" doc:id="676c72e7-a0e4-4000-aff3-e6c5a562c1b1" target="contactId" config-ref="finanical-cloud-services" targetValue="#[payload.items.id reduce $$]">
+			<salesforce:records><![CDATA[#[vars.contactmapping]]]></salesforce:records>
+		</salesforce:create>
+		<choice doc:name="Choice" doc:id="d995f51a-1213-4cf5-8009-eec458ab02ca" >
+			<when expression="#[isEmpty(vars.contactId)]">
+				<raise-error doc:name="Raise error" doc:id="f128b6d9-c91f-4575-8787-530b75d00f3d" type="ANY:NOTCREATED" description="Contact not created."/>
+			</when>
+			<otherwise>
+				<logger level="INFO" doc:name="vars.contactId" doc:id="96a23d82-6c89-4c78-87d3-f05991a38b15" message='#["ContactId: " ++ vars.contactId]' />
+				<flow-ref doc:name="mongoUpdate" doc:id="4c469607-2ae0-4472-a8f3-01d567606539" name="mongoUpdate" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="createAccount" doc:id="51823135-d9f4-406a-a62d-4a5feb69702c" >
+		<ee:transform doc:name="vars.accountmapping" doc:id="b89c473c-b952-4e56-a9e4-74de64f0df59" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="accountmapping" ><![CDATA[%dw 2.0
+output application/java
+fun AccountMapping(obj:Object) = ([
+
+    {  
+
+       Name: obj.fname ++ " " ++ obj.mname++ " " ++ obj.lname,
+       AccountNumber: uuid()
+       
+
+       }
+
+])
+
+---
+
+AccountMapping(vars.jsondata)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:create type="Account" doc:name="Create account" doc:id="08c830cb-1a2f-48ba-a666-c6fde129867c" target="acctId" targetValue="#[payload.items.id reduce $$]" config-ref="finanical-cloud-services">
+			<salesforce:records ><![CDATA[#[vars.accountmapping]]]></salesforce:records>
+		</salesforce:create>
+		<choice doc:name="Choice" doc:id="4a5576e2-4efc-4f5e-b027-403a1e316af5" >
+			<when expression="#[isEmpty(vars.acctId)]">
+				<raise-error doc:name="Raise error" doc:id="361d4550-8e3f-45d9-926e-b36907d386f9" type="NOT:NOTCREATED" description="Account is not created in salesforce."/>
+			</when>
+			<otherwise >
+				<flow-ref doc:name="mongoUpdate" doc:id="c5aada39-8dad-4737-ba12-f28faa14d8cc" name="mongoUpdate" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<sub-flow name="mongoUpdate" doc:id="2dedb5e7-de9e-4ac1-8c25-4197292a5eb8" >
+		<ee:transform doc:name="vars.mongoData" doc:id="f058d78d-f225-47c1-86aa-1942386cf236">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="mongoData"><![CDATA[%dw 2.0
+output application/json
+---
+{
+	CreatedDate: now(),
+	AccountId : vars.acctId,
+	ContactId: vars.contactId,
+	OpportunityId: vars.oppId,
+	LoanApplicantId: vars.loanappId,
+	LoanApplicationId: vars.applicationId,
+	TransferStatus: vars.transferstatus,
+	LoanAddressId: vars.loanaddrId,
+	LoanDeclarationId: vars.declareId,
+	LoanEmploymentId: vars.empId
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<mongo:update-documents doc:name="Update mongoDB data" doc:id="d9c6d8ca-4479-4e92-b8f1-bca3f173e1b8" collectionName="${mongo.loandetailscollectionname}" target="mongoupdate" config-ref="loan-details-config">
+			<mongo:query><![CDATA[#[vars.'sfdc-id']]]></mongo:query>
+			<mongo:content-to-update><![CDATA[#[vars.mongoData]]]></mongo:content-to-update>
+		</mongo:update-documents>
+	</sub-flow>
+	<flow name="commsAPI" doc:id="c2ede82e-30cf-4ee7-83b9-bc0e1b3059a6" >
+		<http:request method="POST" doc:name="sending email" doc:id="bb16d546-487a-4254-b723-8b25071868b8" config-ref="comms" path="${commsaccelerator.path}" />
+	</flow>
+	<sub-flow name="emailflow" doc:id="05c496c5-6125-4d4e-9af1-d378b18386ba" >
+		<choice doc:name="Choice" doc:id="4fce8f69-a8cd-45df-8fe0-74be1d9792bf" >
+			<when expression="#[vars.mongoData.'TransferStatus' == &quot;In progress&quot;]">
+				<parse-template doc:name="rejected.html" doc:id="40758693-377a-4dd5-b7d1-2db19d816317" location="forms\rejected.html" target="htmlform" targetValue="#[payload]" />
+				<ee:transform doc:name="converting to multipart" doc:id="569f6c66-6306-422c-9d45-766c2a9ebce1">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+---
+{
+  "parts": {
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "realtime",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Yes"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "subject-line",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Your Application has been Rejected"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "channel",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "EMAIL"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "email-id",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": vars.jsondata.'email-primary'
+    },
+    "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "Form.html",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "text/html"
+            },
+            "content": vars.htmlform
+        }
+  }
+}
+   
+
+
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="commsAPI" doc:id="52f9b727-20c1-4bbe-8669-b16e47efbbe1" name="commsAPI"/>
+			</when>
+			<otherwise>
+				<http:request method="POST" doc:name="mulesoft forms to get the otplink" doc:id="74cbb28b-e4c3-4796-9d29-7228d275f7e7" url="${formsaccelerator.url}" target="otplink">
+			<http:body><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	"uuid" : vars.applicationId as String
+}]]]></http:body>
+			<http:uri-params><![CDATA[#[output application/java
+---
+{
+	"envelop-id" : p('formsaccelerator.otpform')
+}]]]></http:uri-params>
+		</http:request>
+				<set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;vars.otplink.link]" doc:name="vars.otplink" doc:id="463c79bf-b8d6-43cd-a345-d3325ee11183" variableName="otplink" />
+				<parse-template doc:name="form_submitted.html" doc:id="ca7b7cc2-8d5e-4753-92e0-7ae835fa1178" location="forms\form_submitted.html" target="htmlform" targetValue="#[payload]"/>
+				<ee:transform doc:name="converting to multipart" doc:id="60258a1a-ed3c-4d55-8c9f-8203492ab813" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+---
+{
+  "parts": {
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "realtime",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Yes"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "subject-line",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Your Application has been submitted with reference number " ++ vars.'jsondata'.loan_reference_id  
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "channel",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "EMAIL"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "email-id",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": vars.jsondata.'email-primary'
+    },
+    "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "Form.html",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "text/html"
+            },
+            "content": vars.htmlform
+        }
+  }
+}
+   
+
+
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="commsAPI" doc:id="8aac410f-6549-447e-9cc6-89352c4f7260" name="commsAPI" />
+			</otherwise>
+		</choice>
+	</sub-flow>
+	<flow name="onDatainsertionFlow" doc:id="8993a834-c45a-46be-bcf5-90a728929ddb" >
+		<mongo:object-listener collectionName="${mongo.formscollectionname}" doc:name="On Object Listener" doc:id="8f9553f4-bbb8-4c21-9e79-6fe584ee2236" watermarkField="createdDate" config-ref="formcollection-config">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+		</mongo:object-listener>
+		<ee:transform doc:name="vars.jsonadata" doc:id="96529c28-045d-4777-9a83-332686e16998" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="jsondata" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="objectCreation" doc:id="b22cdc5e-9ab0-4af1-89ac-bd5909defce7" name="objectCreation"/>
+		<ee:transform doc:name="converting to multipart" doc:id="8793d67d-d872-4b4a-abc7-1c27002de8c0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+import * from dw::core::Arrays
+import dw::module::Multipart
+output multipart/form-data
+---
+{"parts":(vars.jsondata.'___attachments' map(files: {
+
+            headers : {
+
+                "Content-Disposition" : {
+
+                    "name" : "files",
+
+                    "filename" : $.fileName ++ "." ++ $.'extension',
+
+                    "subtype" : "form-data"
+
+                },
+
+                "Content-Type" : $.mimetype
+
+            },
+
+            "content" : fromBase64($.content)
+
+        })) reduce($$ ++ $)}
+
+
+]]></ee:set-payload>
+				<ee:set-attributes ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"queryParams":{
+		"id" : vars.applicationId
+}
+
+}]]></ee:set-attributes>
+			</ee:message>
+		</ee:transform>
+<flow-ref doc:name="uploadDoc" doc:id="94a889ae-5e1c-4cc1-abf1-03df9982221c" name="uploadDoc"/>
+		<!-- [STUDIO:"upload documents to salesforce"]		<http:request method="POST" doc:name="upload documents to salesforce" doc:id="a4b32385-81a8-4880-886e-4ee19bb97f88" config-ref="storage" path="/${storage.path}">
+			<http:query-params ><![CDATA[#[output application/java
+&#45;&#45;-
+{
+	"id" : vars.applicationId
+}]]]></http:query-params>
+		</http:request> [STUDIO] -->
+		<logger level="INFO" doc:name="payload" doc:id="50e2676f-e475-4a45-813b-e7fd5093dded" message="#[payload]"/>
+		<logger level="INFO" doc:name='"Loan application submitted successfully"' doc:id="188be9f0-63a2-4833-b02e-90f901909fe2" message='#["Loan application submitted successfully"]'/>
+		<ee:transform doc:name="Transform Message" doc:id="9160c8a4-3c0c-4202-9d15-b2de6c2eed7a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	'loan_application_number' : vars.applicationId,
+	'loan_reference_id' : vars.jsondata.loan_reference_id,
+	'modifiedDate' : now()
+	
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+			</ee:variables>
+		</ee:transform>
+		<mongo:update-documents collectionName="${mongo.formscollectionname}" doc:name="Update documents" doc:id="845d6582-9ea1-4e90-aa07-9f439e398aa8" config-ref="formcollection-config">
+			<mongo:query ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	'loan_reference_id' : payload.loan_reference_id
+}]]]></mongo:query>
+		</mongo:update-documents>
+		<logger level="INFO" doc:name="Logger" doc:id="a2c039c2-4928-4034-94d7-e6fafa66909b" message='#["Loan Application number updated successfully."]'/>
+	</flow>
+	<flow name="submit-formdata-Flow" doc:id="69773f5f-c5a5-4cc6-9c54-28cf93ac674c" >
+        <ee:transform doc:name="payload" doc:id="04b2cb9f-0a67-4a17-978d-7ebb27b9ba82" >
+            <ee:message >
+                <ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload
+]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="8166a38e-2e4e-4995-bee5-cead17539c4a" message="#[payload]" />
+        <ee:transform doc:name="form data" doc:id="5179c2b3-7bc8-420c-8504-ccc08ddac5af" >
+            <ee:message >
+                <ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+
+
+---
+{
+     loan_reference_id: uuid(),
+     createdDate: now(),
+     modifiedDate: now(),
+     leadId: payload.formId.uniqueid,
+     "loan_application_number": ""
+}  ++ payload.payload ]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="fed5052b-7635-4676-9efd-f568a8c5ab55" message="#[payload]"/>
+        <mongo:insert-document doc:name="Insert document" doc:id="8a5b41d7-2564-444e-93b8-12ceac6f2814" config-ref="formcollection-config" collectionName="${mongo.formscollectionname}" />
+        <logger level="INFO" doc:name="Logger" doc:id="5cfc5ea1-f591-4a36-97d7-2038f36c1ad8" message="#[payload]"/>
+        <ee:transform doc:name="Transform Message" doc:id="5668b3f4-1755-42f0-b93a-19c21c071199" >
+            <ee:message >
+                <ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload.'loan_reference_id']]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<parse-template doc:name="Parse Template" doc:id="94568976-8c07-4f54-94f3-1f1678bbe684" location="forms\submission_landingpage.html"/>
+    
+</flow>
+</mule>

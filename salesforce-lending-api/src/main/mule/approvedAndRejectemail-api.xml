@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="approvedAndRejectemail-apiFlow" doc:id="e08b0c03-7b90-4be6-9a65-f1dc2aedccf9" >
+		<salesforce:subscribe-topic-listener doc:name="Subscribe topic listener" doc:id="c719283e-2a7c-455b-9e96-aa7e9c707ed5" config-ref="finanical-cloud-services" topic="approvedorRejected"/>
+		<ee:transform doc:name="Transform Message" doc:id="99e04a5a-35d8-4b94-9681-2c8aaac5bbf8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-payload>
+				<ee:set-attributes ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	queryParams:{
+		id: payload.Id
+	}
+}]]></ee:set-attributes>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="33c00460-685f-418c-bea3-4ebf3ab34a77" message="#[payload]"/>
+		<flow-ref doc:name="salesforce-aggregator-apiFlow" doc:id="2838cae7-cb20-495f-8f75-fb8380d094c1" name="salesforce-aggregator-apiFlow" target="jsondata"/>
+<!-- [STUDIO:"get loan Applicant details"]		<http:request method="GET" doc:name="get loan Applicant details" doc:id="c7b60c29-490c-4968-810b-9f883c353270" url="${salesforce.aggregratorapiurl}" target="jsondata">
+			<http:query-params><![CDATA[#[output application/java
+&#45;&#45;-
+{
+	"id" : payload.Id
+}]]]></http:query-params>
+		</http:request> [STUDIO] -->
+		<choice doc:name="Choice" doc:id="8244c100-e6ad-4589-ad86-f44a792ac966" >
+			<when expression="#[payload.Status__c == 'Approved']">
+				<flow-ref doc:name="get-user-acceptance-link" doc:id="e3b76ef8-c25f-45a6-a64f-78be0884c57c" name="get-user-acceptance-link" target="userlink"/>
+<!-- [STUDIO:"Parse Template"]				<parse-template doc:name="Parse Template" doc:id="750dd9b0-1bff-4ca3-b0cd-811e0d81c471" location="forms\accepted.html" target="htmlform"/> [STUDIO] -->
+<!-- [STUDIO:"converting to multipart"]				<ee:transform doc:name="converting to multipart" doc:id="2cb6f5cf-22ed-4d53-bfa9-9ec3a815da35" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+&#45;&#45;-
+{
+  "parts": {
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "realtime",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Yes"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "subject-line",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Your Application with reference no " ++ vars.jsondata.LoanApplication.Application_Reference_No__c[0] ++  " has been Approved." 
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "channel",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "EMAIL"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "email-id",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": vars.jsondata.Contact.Email[0]
+    },
+    "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "Form.html",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "text/html"
+            },
+            "content": vars.htmlform
+        }
+  }
+}
+   
+
+
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform> [STUDIO] -->
+<!-- [STUDIO:"commsAPI"]				<flow-ref doc:name="commsAPI" doc:id="7da7f899-3552-4ee0-adcc-1fedf977094a" name="commsAPI" /> [STUDIO] -->
+			</when>
+			<when expression="#[payload.Status__c == 'Credit Report Requested']">
+				<flow-ref doc:name="statement-generator-apiFlow" doc:id="4d7a2abf-68e0-4219-bf62-3d1b73a8d654" name="statement-generator-apiFlow"/>
+			</when>
+			<when expression="#[payload.Status__c == 'Created']">
+				<flow-ref doc:name="sfdc-plaid-validationFlow" doc:id="726e6368-7eaa-4597-98d4-97de61aa13fd" name="sfdc-plaid-validationFlow"/>
+			</when>
+			<when expression="#[payload.Status__c == 'Rejected']">
+				<parse-template doc:name="Parse Template" doc:id="0066a6a1-c36d-492b-854d-74c07819aa1e" location="forms\unable_approve.html" target="htmlform" />
+				<ee:transform doc:name="Transform Message" doc:id="5182da0d-6cf2-47b6-9270-490562db4ba6">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+---
+{
+  "parts": {
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "realtime",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Yes"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "subject-line",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Your Application with reference no " ++ vars.jsondata.LoanApplication.Application_Reference_No__c[0] ++  " has been Rejected." 
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "channel",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "EMAIL"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "email-id",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": vars.jsondata.Contact.Email[0]
+    },
+    "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "Form.html",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "text/html"
+            },
+            "content": vars.htmlform
+        }
+  }
+}
+   
+
+
+]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<flow-ref doc:name="commsAPI" doc:id="27c81432-2b8e-427c-a545-0404149087f5" name="commsAPI" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="4497baa9-57e0-4992-90d7-12f5463485ad" message='"Default"'/>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="07c017fa-9511-4e9b-95ec-9cd6e0a9a91d" message='#["Loan Status Email sent successfully"]'/>
+	</flow>
+	<sub-flow name="get-user-acceptance-link" doc:id="d11b60ff-30d3-47d8-8b8b-370d5cd9a32d" >
+		<ee:transform doc:name="Transform Message" doc:id="4c3c68b2-97e3-45a6-bf59-ca7593eff262" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="useracceptinput" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	uuid : payload.Id 
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request" doc:id="54b5addb-47e6-4ad9-9765-244bf6cc44cf" url="http://user-acceptance-form-api.sg-s1.cloudhub.io/api/nous/mulesoftforms/generate" target="userlink">
+			<http:body ><![CDATA[#[vars.useracceptinput]]]></http:body>
+		</http:request>
+		<set-variable value="#[%dw 2.0&#10;output application/java&#10;---&#10;vars.userlink]" doc:name="Set Variable" doc:id="6f8f36ff-2da5-4087-9036-6ab27c2d3175" variableName="userlink"/>
+		<parse-template doc:name="Parse Template" doc:id="5670801d-b09a-4b32-9d74-a14b52cfebdf" location="forms\acceptance-emailTemplate.html"/>
+		<ee:transform doc:name="Transform Message" doc:id="3a7d749f-21c9-402e-aa06-5937cb6635fa" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+---
+{
+  "parts": {
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "realtime",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Yes"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "subject-line",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Requesting you to accept the Terms and Conditions." 
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "channel",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "EMAIL"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "email-id",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": vars.jsondata.Contact.Email[0]
+    },
+    "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "Form.html",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "text/html"
+            },
+            "content": payload
+        }
+  }
+}
+   
+
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="commsAPI" doc:id="d173d083-b4c9-4742-b65c-473dd719988c" name="commsAPI" />
+	</sub-flow>
+</mule>

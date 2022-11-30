@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_1813a830_e140_491b_bdd4_9cf310affa02_Input_Variables_loanapplicantid = Any
+

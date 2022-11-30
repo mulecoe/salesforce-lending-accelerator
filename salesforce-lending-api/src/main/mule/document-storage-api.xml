@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="29ff99b3-6de0-4307-a99c-52776d34991b" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="80dc4583-37b2-4296-9468-7a9e3ca0690d" >
+		<salesforce:basic-connection username="poojagbhat100199-hkjd@force.com" password="Nous@1234" securityToken="wjT7lVJhzVxDEv2dF25qyYHV" />
+	</salesforce:sfdc-config>
+	<flow name="uploadDoc" doc:id="1813a830-e140-491b-bdd4-9cf310affa02">
+		<ee:transform doc:name="vars.filename, vars.filecontent" doc:id="0859cb87-2eaf-4f99-a5d4-7bfb6cc639c9">
+            <ee:message >
+            </ee:message>
+            <ee:variables>
+                <ee:set-variable variableName="filename"><![CDATA[%dw 2.0
+output application/java
+---
+payload.parts..filename]]></ee:set-variable>
+                <ee:set-variable variableName="fileContent"><![CDATA[%dw 2.0
+output application/java
+---
+payload.parts..*content
+
+
+
+
+]]></ee:set-variable>
+                <ee:set-variable variableName="data"><![CDATA[payload]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<ee:transform doc:name="vars.content version" doc:id="327835a2-16f1-48c8-889c-44891d08367b" >
+            <ee:message />
+            <ee:variables >
+                <ee:set-variable variableName="ContentVersion" ><![CDATA[%dw 2.0
+import toBase64 from dw::core::Binaries
+import * from dw::core::Arrays
+output application/json
+---
+((((vars.data.parts filterObject ((value, key, index) -> value..'Content-Type' != null)) pluck ((value, key, index) -> (key: value)))..key) map ((item, index) -> (do{
+    var filename = item.headers.'Content-Disposition'.filename
+    var contentType= item.headers."Content-Type"
+    var titleArray = (filename splitBy  ".")
+    var title = (titleArray take sizeOf(titleArray) -1) joinBy  "."
+    var content = if ( item.content is Binary ) item.content as Binary else if ( item.content is Object ) write(item.content, contentType) else write(item.content, "text/plain")
+    ---
+    {
+        "FirstPublishLocationId": attributes.queryParams.id,
+        "PathOnClient": filename,
+        "Title": title,
+        "VersionData": toBase64(content)
+    }
+})))]]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<salesforce:create doc:name="Create" doc:id="4b715882-b752-4541-baa9-e2f700c105f6" config-ref="Salesforce_Config" type="ContentVersion" target="id">
+			<salesforce:records ><![CDATA[#[vars.contentVersion]]]></salesforce:records>
+		</salesforce:create>
+		<ee:transform doc:name='"Document has been uploaded successfully"' doc:id="38bd673f-3e13-4beb-94d2-56b65410d34a" >
+            <ee:message >
+                <ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Document has been uploaded successfully"
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+    </flow>
+	<flow name="getContentVersionByParentIdFlow" doc:id="053dd537-7372-4af5-bbe7-f96a230ecdd6" >
+		<salesforce:query doc:name="Get ContentVersion" doc:id="762b83c6-01ce-42ae-8c46-328aaac47017" config-ref="Salesforce_Config" >
+			<salesforce:salesforce-query ><![CDATA[SELECT Id,FirstPublishLocationId,PathOnClient,Title,VersionData FROM ContentVersion WHERE FirstPublishLocationId= ':Id' and isLatest = true
+			]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"Id" : attributes.queryParams.id
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<choice doc:name="ContentVersion Exist?" doc:id="ba6b5ba7-e76e-4b3f-97f8-106ee7d56879" >
+			<when expression="#[sizeOf(payload) != 0]" >
+				<ee:transform doc:name="Create JSON response" doc:id="5acc2f43-68d4-4a7a-9f6f-edba4375f4da" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Create JSON response" doc:id="ac27824d-ff67-46f8-affc-c0945ae0b6af" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  message: "Parent/ContentVersion not found"
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatus" ><![CDATA[404]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Logger" doc:id="ca9f09e6-1716-4059-824c-4ca4f7e37a15" message="#[payload]" />
+	</flow>
+</mule>

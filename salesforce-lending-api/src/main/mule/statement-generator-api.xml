@@ -1,0 +1,664 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:mongo="http://www.mulesoft.org/schema/mule/mongo"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/mongo http://www.mulesoft.org/schema/mule/mongo/current/mule-mongo.xsd">
+	<flow name="statement-generator-apiFlow" doc:id="7397339c-1084-477b-9323-f780ef8c8863" >
+		<set-variable value="#[%dw 2.0
+output application/json
+---
+vars.'jsondata'.LoanApplication.Id reduce $$]" doc:name="loanapplicantid" doc:id="4282a1aa-d914-4a00-8cb9-8e6c70f5aaa1" variableName="loanapplicantid"/>
+		<logger level="INFO" doc:name="Logger" doc:id="ab22d58e-3b24-4627-a2a4-7f87271f7d43" message="#[payload]" />
+		<http:request method="GET" doc:name="Request to lending verification api /creditscore" doc:id="dd4165d2-4e37-4076-b05a-948f8e12ead3" url="${verification.url}" target="creditscoredata">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"SSN" : payload.SSN__c
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="prepare input for credit report generation" doc:id="3c47d2b3-9b85-4f7b-987c-00a3d98d26b2">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[
+  {
+    "Company": vars.'jsondata'.LoanApplicantEmployment.EmployerName[0],
+    "Email": vars.'jsondata'.Contact.Email[0],
+    "Address": {
+      "country": vars.'jsondata'.LoanApplicantAddress.ResidenceAddress.country[0],
+      "city": vars.'jsondata'.LoanApplicantAddress.ResidenceAddress.city[0],
+      "countryCode": null,
+      "street": vars.'jsondata'.LoanApplicantAddress.ResidenceAddress.street[0],
+      "latitude": null,
+      "postalCode": vars.'jsondata'.LoanApplicantAddress.ResidenceAddress.postalCode[0],
+      "geocodeAccuracy": null,
+      "stateCode": null,
+      "state": vars.'jsondata'.LoanApplicantAddress.ResidenceAddress.state[0],
+      "longitude": null
+    },
+    "OwnerId": vars.'jsondata'.Contact.OwnerId[0],
+    "Phone": vars.'jsondata'.Contact.Phone[0],
+    "Id": vars.'jsondata'.LoanApplicant.LoanApplicationId[0],
+    "type": "credit_card",
+    "MobilePhone": vars.'jsondata'.Contact.Phone[0],
+    "Name": vars.'jsondata'.LoanApplicant.Name[0],
+    "Loan Application Id": vars.'jsondata'.LoanApplicant.LoanApplicationId[0],
+    "Age": "25",
+    "Gender": vars.'jsondata'.LoanApplicant.GenderType[0],
+    "Nationality": vars.'jsondata'.LoanApplicant.CitizenshipStatus[0],
+    "Country": "India",
+    "Marital Status": vars.'jsondata'.LoanApplicant.MaritalStatus[0],
+    "Dependents":vars.'jsondata'.LoanApplicant.DependentCount[0],
+    "Religion": "Christian",
+    "DOB": vars.'jsondata'.Contact.Birthdate[0],
+    "DL": vars.'jsondata'.Contact.Id[0],
+    "Education": "BE",
+    "Correspondence Address": vars.'jsondata'.LoanApplicantAddress.CorrespondenceAddress__c[0],
+    "Permanent Address": "Bangalore",
+    "Loan Details": {
+      "Amount applied": "1273",
+      "Tenure": "2 months",
+      "Loan reason": "Vehicle loan",
+      "Employment details": {
+        "Employer name": "John",
+        "Occupation": "Engineer",
+        "EmpPhone number": "9273871927",
+        "Location": "Bangalore",
+        "Address": "24th main road, Hsr"
+      }
+    },
+    "SSN": vars.'jsondata'.LoanApplicant.SSN__c[0],
+    "accounts": [
+      {
+        "account_id": "dVWvnGgEEMt6RKAkama9SJyqzDGVx6C64gxqB",
+        "balances": {
+          "available": 100,
+          "current": 110,
+          "iso_currency_code": "USD",
+          "limit": null,
+          "unofficial_currency_code": null
+        },
+        "mask": "0000",
+        "name": "Plaid Checking",
+        "official_name": "Plaid Gold Standard 0% Interest Checking",
+        "owners": [
+          {
+            "addresses": [
+              {
+                "data": {
+                  "city": "Malakoff",
+                  "country": "US",
+                  "postal_code": "14236",
+                  "region": "NY",
+                  "street": "2992 Cameron Road"
+                },
+                "primary": true
+              },
+              {
+                "data": {
+                  "city": "San Matias",
+                  "country": "US",
+                  "postal_code": "93405-2255",
+                  "region": "CA",
+                  "street": "2493 Leisure Lane"
+                },
+                "primary": false
+              }
+            ],
+            "emails": [
+              {
+                "data": "accountholder0@example.com",
+                "primary": true,
+                "type": "primary"
+              },
+              {
+                "data": "accountholder1@example.com",
+                "primary": false,
+                "type": "secondary"
+              },
+              {
+                "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+                "primary": false,
+                "type": "other"
+              }
+            ],
+            "names": [
+              "Alberta Bobbeth Charleson"
+            ],
+            "phone_numbers": [
+              {
+                "data": "1112223333",
+                "primary": false,
+                "type": "home"
+              },
+              {
+                "data": "1112224444",
+                "primary": false,
+                "type": "work"
+              },
+              {
+                "data": "1112225555",
+                "primary": false,
+                "type": "mobile"
+              }
+            ]
+          }
+        ],
+        "subtype": "checking",
+        "type": "depository"
+      },
+      {
+        "account_id": "dVWvnGgEEMt6RKAkama9SJyqzDGVx6C64gxqB",
+        "balances": {
+          "available": 100,
+          "current": 110,
+          "iso_currency_code": "USD",
+          "limit": null,
+          "unofficial_currency_code": null
+        },
+        "mask": "0000",
+        "name": "Plaid Checking",
+        "official_name": "Plaid Gold Standard 0% Interest Checking",
+        "owners": [
+          {
+            "addresses": [
+              {
+                "data": {
+                  "city": "Malakoff",
+                  "country": "US",
+                  "postal_code": "14236",
+                  "region": "NY",
+                  "street": "2992 Cameron Road"
+                },
+                "primary": true
+              },
+              {
+                "data": {
+                  "city": "San Matias",
+                  "country": "US",
+                  "postal_code": "93405-2255",
+                  "region": "CA",
+                  "street": "2493 Leisure Lane"
+                },
+                "primary": false
+              }
+            ],
+            "emails": [
+              {
+                "data": "accountholder0@example.com",
+                "primary": true,
+                "type": "primary"
+              },
+              {
+                "data": "accountholder1@example.com",
+                "primary": false,
+                "type": "secondary"
+              },
+              {
+                "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+                "primary": false,
+                "type": "other"
+              }
+            ],
+            "names": [
+              "Alberta Bobbeth Charleson"
+            ],
+            "phone_numbers": [
+              {
+                "data": "1112223333",
+                "primary": false,
+                "type": "home"
+              },
+              {
+                "data": "1112224444",
+                "primary": false,
+                "type": "work"
+              },
+              {
+                "data": "1112225555",
+                "primary": false,
+                "type": "mobile"
+              }
+            ]
+          }
+        ],
+        "subtype": "checking",
+        "type": "depository"
+      },
+      {
+        "account_id": "dVWvnGgEEMt6RKAkama9SJyqzDGVx6C64gxqB",
+        "balances": {
+          "available": 100,
+          "current": 110,
+          "iso_currency_code": "USD",
+          "limit": null,
+          "unofficial_currency_code": null
+        },
+        "mask": "0000",
+        "name": "Plaid Checking",
+        "official_name": "Plaid Gold Standard 0% Interest Checking",
+        "owners": [
+          {
+            "addresses": [
+              {
+                "data": {
+                  "city": "Malakoff",
+                  "country": "US",
+                  "postal_code": "14236",
+                  "region": "NY",
+                  "street": "2992 Cameron Road"
+                },
+                "primary": true
+              },
+              {
+                "data": {
+                  "city": "San Matias",
+                  "country": "US",
+                  "postal_code": "93405-2255",
+                  "region": "CA",
+                  "street": "2493 Leisure Lane"
+                },
+                "primary": false
+              }
+            ],
+            "emails": [
+              {
+                "data": "accountholder0@example.com",
+                "primary": true,
+                "type": "primary"
+              },
+              {
+                "data": "accountholder1@example.com",
+                "primary": false,
+                "type": "secondary"
+              },
+              {
+                "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+                "primary": false,
+                "type": "other"
+              }
+            ],
+            "names": [
+              "Alberta Bobbeth Charleson"
+            ],
+            "phone_numbers": [
+              {
+                "data": "1112223333",
+                "primary": false,
+                "type": "home"
+              },
+              {
+                "data": "1112224444",
+                "primary": false,
+                "type": "work"
+              },
+              {
+                "data": "1112225555",
+                "primary": false,
+                "type": "mobile"
+              }
+            ]
+          }
+        ],
+        "subtype": "checking",
+        "type": "depository"
+      },
+      {
+        "account_id": "dVWvnGgEEMt6RKAkama9SJyqzDGVx6C64gxqB",
+        "balances": {
+          "available": 100,
+          "current": 110,
+          "iso_currency_code": "USD",
+          "limit": null,
+          "unofficial_currency_code": null
+        },
+        "mask": "0000",
+        "name": "Plaid Checking",
+        "official_name": "Plaid Gold Standard 0% Interest Checking",
+        "owners": [
+          {
+            "addresses": [
+              {
+                "data": {
+                  "city": "Malakoff",
+                  "country": "US",
+                  "postal_code": "14236",
+                  "region": "NY",
+                  "street": "2992 Cameron Road"
+                },
+                "primary": true
+              },
+              {
+                "data": {
+                  "city": "San Matias",
+                  "country": "US",
+                  "postal_code": "93405-2255",
+                  "region": "CA",
+                  "street": "2493 Leisure Lane"
+                },
+                "primary": false
+              }
+            ],
+            "emails": [
+              {
+                "data": "accountholder0@example.com",
+                "primary": true,
+                "type": "primary"
+              },
+              {
+                "data": "accountholder1@example.com",
+                "primary": false,
+                "type": "secondary"
+              },
+              {
+                "data": "extraordinarily.long.email.username.123456@reallylonghostname.com",
+                "primary": false,
+                "type": "other"
+              }
+            ],
+            "names": [
+              "Alberta Bobbeth Charleson"
+            ],
+            "phone_numbers": [
+              {
+                "data": "1112223333",
+                "primary": false,
+                "type": "home"
+              },
+              {
+                "data": "1112224444",
+                "primary": false,
+                "type": "work"
+              },
+              {
+                "data": "1112225555",
+                "primary": false,
+                "type": "mobile"
+              }
+            ]
+          }
+        ],
+        "subtype": "checking",
+        "type": "depository"
+      }
+    ],
+    "item": {
+      "available_products": [
+        "assets",
+        "balance",
+        "credit_details",
+        "income",
+        "investments",
+        "liabilities"
+      ],
+      "billed_products": [
+        "auth",
+        "identity",
+        "transactions"
+      ],
+      "consent_expiration_time": null,
+      "error": null,
+      "institution_id": "ins_3",
+      "item_id": "E4mGya7eeVtgr7lkmdmMcAev4vQLMVtX9zdzd",
+      "optional_products": null,
+      "products": [
+        "auth",
+        "identity",
+        "transactions"
+      ],
+      "update_type": "background",
+      "webhook": ""
+    },
+    "request_id": "zFAdj7IxzYfA0Lj",
+    "totalamount": 50000,
+    "customer_id": "8764435",
+    "income_amount": 2345600,
+    "instalments": 9,
+    "next_payment_date": "2022-10-02T14:15:22.000+00:00",
+    "prev_payment_date": "2022-09-02T14:15:22.000+00:00",
+    "loanid": "LAP8884",
+    "purpose": "Bike Loan",
+    "repayment_frequency": "monthly",
+    "repayment_type": "repayment",
+    "start_date": "2022-04-02T14:15:22.000+00:00",
+    "end_date": "2022-12-02T14:15:22.000+00:00",
+    "first_payment_date": "2022-04-02T14:15:22.000+00:00",
+    "issuer_id": "67574345",
+    "status": "defaulted",
+    "creditcard_number": "6465754521927654",
+    "balance": 9999,
+    "currency_code": "INR",
+    "CustomerName ": vars.'jsondata'.LoanApplicant.Name[0],
+    "providerViews": [
+      {
+        "provider": "EFX",
+        "score": vars.creditscoredata[0].providerViews[0].score,
+        "scoreRanges": [
+          {
+            "low": 100,
+            "high": 233,
+            "name": "high"
+          }
+        ],
+        "loanRiskRanges": [
+          {
+            "low": -213,
+            "high": 100,
+            "name": "not mentioned"
+          }
+        ],
+        "scoreReasons": [
+          {
+            "code": "valid",
+            "description": "invalid",
+            "creditScoreFactorEffect": "HELPING"
+          }
+        ]
+      }
+    ],
+    "id": "987657",
+    "scoreType": "US_EFX",
+    "scoreModel": "VANTAGE",
+    "generatedDate": now() as Date,
+    "Enquiry": [
+      {
+        "enquirydate": "5/08/2021",
+        "compayname": "DIGITAL",
+        "mnumber": "999FF00383\n"
+      },
+      {
+        "enquirydate": "5/06/2021",
+        "compayname": "KFD TEST",
+        "mnumber": "999ZB04441"
+      },
+      {
+        "enquirydate": "12/04/2021",
+        "compayname": "KFD TEST",
+        "mnumber": "999ZB04441"
+      },
+      {
+        "enquirydate": "12/03/2021",
+        "compayname": "KFD TEST",
+        "mnumber": "999ZB04441"
+      },
+      {
+        "enquirydate": "12/03/2021",
+        "compayname": "DIGITAL",
+        "mnumber": "999FF00383\n"
+      },
+      {
+        "enquirydate": "12/02/2021",
+        "compayname": "KROLL FD",
+        "mnumber": "999ZB04433"
+      },
+      {
+        "enquirydate": "1/11/2021",
+        "compayname": "Disney",
+        "mnumber": "87686868"
+      },
+      {
+        "enquirydate": "5/10/2020",
+        "compayname": "WMFINANCE",
+        "mnumber": "768FP09869"
+      },
+      {
+        "enquirydate": "4/14/2020",
+        "compayname": "WMFINANCE",
+        "mnumber": "768FP09869"
+      },
+      {
+        "enquirydate": "12/09/2021",
+        "compayname": "WMFINANCE",
+        "mnumber": "768FP09869"
+      }
+    ]
+  }
+]]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="plaidstatementInput" ><![CDATA[%dw 2.0
+output application/json
+---
+{
+
+  "contact_id" : vars.'jsondata'.Contact.Id[0],
+
+  "loan_id" : vars.'jsondata'.LoanApplication.Id[0]
+
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="POST" doc:name="pdf generation api" doc:id="efda93ec-c6d3-49b4-9611-39c1ee07c865" url="${pdf.url}{templateId}">
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+    "templateId" : p('pdf.templateid')
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="prepare input for SF" doc:id="a46c3c6d-6eed-4d75-9133-7e000ee6d3a6">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+---
+{
+    "parts": {
+        "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "credit report.pdf",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "application/pdf"
+            },
+            "content": fromBase64(payload.response)
+                          }
+    }
+}]]></ee:set-payload>
+				<ee:set-attributes ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"queryParams":{
+		"id" : vars.loanapplicantid
+}
+
+}]]></ee:set-attributes>
+			
+</ee:message>
+		</ee:transform>
+		<flow-ref doc:name="uploadDoc" doc:id="8afb30fa-72f3-4270-bfae-73645ac1550a" name="uploadDoc"/>
+		<async doc:name="Async" doc:id="ae2ee04f-f6e6-4a99-b883-d522eebbb1ed" >
+			<http:request method="POST" doc:name="request to plaid statement generator" doc:id="ca59c9c2-25b8-4055-8da0-9e740749f3b1" config-ref="plaid" path="/${plaidaccelerator.path}">
+			<http:body><![CDATA[#[vars.plaidstatementInput]]]></http:body>
+		</http:request>
+		</async>
+		<ee:transform doc:name="response" doc:id="b369e0f7-920e-4e75-aca4-d71b5b4fe490">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="e6a15eee-cc02-4c2b-832c-f6b13e308575" message="#[payload]"/>
+	</flow>
+	<flow name="sfdc-plaid-validationFlow" doc:id="23ac8078-7f1f-4bad-ab4e-d9e600f4c81e" >
+		<logger level="INFO" doc:name="Logger" doc:id="c429f136-7b24-4fcf-beaf-bfd2374ee66a" message="#[%dw 2.0
+&#10;output application/json
+&#10;---
+&#10;payload]"/>
+		<ee:transform doc:name="SF Created status loan application" doc:id="4a584d2b-f09a-439c-bb86-1e8a0113d4cb" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="salesforceAggResponse" ><![CDATA[%dw 2.0
+output application/json
+---
+vars.jsondata]]></ee:set-variable>
+			</ee:variables>
+		
+</ee:transform>
+<!-- [STUDIO:"salesforce agg request"]		<http:request method="GET" doc:name="salesforce agg request" doc:id="a298454e-1c8e-401f-aed9-4c31d1d615e1" target="salesforceAggResponse" url="http://salesforce-aggregator-api.sg-s1.cloudhub.io/loanapplicant">
+			<http:query-params ><![CDATA[#[output application/java
+&#45;&#45;-
+{
+	"id" : payload.Id
+}]]]></http:query-params>
+		</http:request> [STUDIO] -->
+		<mongo:find-documents doc:name="Find documents" doc:id="137104a1-f241-41be-a7f8-a585da88f01d" config-ref="LendingAcc" collectionName="${mongo.plaidUserCredsCol}" fields=",">
+			<mongo:query ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	"contact_id": vars.salesforceAggResponse.Contact..Id[0]
+}]]]></mongo:query>
+		</mongo:find-documents>
+		<ee:transform doc:name="plaid credentials" doc:id="3104ae5c-8432-4353-84d1-37545081ea49" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="check if contactId is mapped with plaid credentials" doc:id="2a249314-b038-450c-97c1-fca78b8ffe98" >
+			<when expression="#[sizeOf(payload) &gt; 0]">
+				<logger level="INFO" doc:name="Logger" doc:id="38f95b6e-0222-4165-a70c-2156ac625f66" message='#["contact exists"]'/>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="insert contact into mongodb" doc:id="f985e159-7fb5-4521-aa74-4316e256b1f8">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "client_id": "62b2c28d5063bf00153693a0",
+  "secret": "0b9acdbc17a3aa5304237b3efbda00",
+  "contact_id": vars.salesforceAggResponse.Contact..Id[0]
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+				<mongo:insert-document doc:name="Insert document" doc:id="b5228304-3dfc-41c0-ae3e-01eebc4c2e4a" config-ref="LendingAcc" collectionName="${mongo.plaidUserCredsCol}">
+					<mongo:document ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+  "client_id": "62b2c28d5063bf00153693a0",
+  "secret": "0b9acdbc17a3aa5304237b3efbda00",
+  "contact_id": vars.salesforceAggResponse.Contact..Id[0]
+}]]]></mongo:document>
+				</mongo:insert-document>
+				<logger level="INFO" doc:name="Logger" doc:id="1bc24498-3501-4de7-8773-64ff67c4338c" message='#["Loan Contact Id is mapped with plaid credentials"]'/>
+			
+</otherwise>
+		</choice>
+	</flow>
+</mule>

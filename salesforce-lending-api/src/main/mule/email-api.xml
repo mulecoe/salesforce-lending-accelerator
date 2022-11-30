@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<flow name="email-apiFlow" doc:id="00f00382-03b4-42f0-88f8-24aed82deb7c" >
+		<salesforce:subscribe-topic-listener doc:name="Subscribe topic listener" doc:id="7af276f8-ebef-41a6-8730-58574d56bf84" config-ref="leads-config" topic="Working-Contacted"/>
+		<ee:transform doc:name="vars.sfdata" doc:id="efdbee4c-b0bd-4fb2-9da5-6df7a013cf4e" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="sfdata" ><![CDATA[%dw 2.0
+output application/java
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request method="POST" doc:name="mulesoft forms to get the link" doc:id="76c5a7a6-1e3f-45e7-835b-ed0778765001" target="formlink" url="${formsaccelerator.url}">
+			<http:body ><![CDATA[#[%dw 2.0
+output application/json
+---
+{
+	"uuid" : vars.sfdata.Id as String
+}]]]></http:body>
+			<http:uri-params ><![CDATA[#[output application/java
+---
+{
+	"envelop-id" : p('formsaccelerator.loanform')
+}]]]></http:uri-params>
+		</http:request>
+		<ee:transform doc:name="formlink as payload" doc:id="65d9d7c5-8250-4676-b56a-516cb06c3775" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+vars.formlink.link]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="name" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.sfdata.Name]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<parse-template doc:name="loaninvitation.html" doc:id="074ed393-f776-4d36-96a8-d348fc675397" location="forms\loaninvitation.html" target="htmlform" targetValue="#[payload]">
+		</parse-template>
+		<ee:transform doc:name="converting to multipart" doc:id="25f2620c-fe1a-4e4e-9435-b78fa182ebe5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+---
+{
+  "parts": {
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "realtime",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Yes"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "subject-line",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "Please fill the form regarding your application"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "channel",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": "EMAIL"
+    },
+    "files": {
+      "headers": {
+        "Content-Disposition": {
+          "name": "email-id",
+          "subtype": "form-data"
+        },
+        "Content-Type": "text/plain"
+      },
+      "content": vars.sfdata.'Email'
+    },
+    "files": {
+            "headers": {
+                "Content-Disposition": {
+                    "name": "files",
+                    "filename": "Form.html",
+                    "subtype": "form-data"
+                },
+                "Content-Type": "text/html"
+            },
+            "content": vars.htmlform
+        }
+  }
+}
+   
+
+
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="Request to comms accelerator" doc:id="18064094-9863-4b4e-add0-ef498abc7ec1" config-ref="comms" path="${commsaccelerator.path}"/>
+		<logger level="INFO" doc:name='"Form Link sent successfully."' doc:id="007496ea-1ac1-409b-80fc-b7490c812dda" message='#["Form Link sent successfully."]'/>
+	</flow>
+</mule>

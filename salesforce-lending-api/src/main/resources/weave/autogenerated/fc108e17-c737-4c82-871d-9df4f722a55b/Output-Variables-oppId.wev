@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_fc108e17_c737_4c82_871d_9df4f722a55b_Output_Variables_oppId = {|  |} | Null
+

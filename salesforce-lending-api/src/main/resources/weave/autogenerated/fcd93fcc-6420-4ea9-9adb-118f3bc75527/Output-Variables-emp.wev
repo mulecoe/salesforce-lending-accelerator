@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_fcd93fcc_6420_4ea9_9adb_118f3bc75527_Output_Variables_emp = Array<{|  Name: Any,   LoanApplicationId: {|  |} | Null,   LoanApplicantId: {|  |} | Null,   EmployerName: Any,   JobTitle: Any,   CurrentJobYearCount: Number,   EmployerPhone: Any,   MonthlyOtherIncomeAmount*: Any,   MonthlyIncome: Any,   MonthlyBaseIncomeAmount: Any,   MonthlyOvertimeAmount: Any,   MonthlyBonusAmount: Any,   MonthlyCommissionAmount: Any,   MonthlyMilitaryEntlAmt: Any,   EmployerAddress: Any|}>
+

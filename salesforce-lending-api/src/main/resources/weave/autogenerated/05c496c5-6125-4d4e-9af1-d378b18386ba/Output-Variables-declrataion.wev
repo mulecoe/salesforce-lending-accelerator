@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_05c496c5_6125_4d4e_9af1_d378b18386ba_Output_Variables_declrataion = Array<{|  Name: Any,   LoanApplicationId: {|  |} | Null,   LoanApplicantId: {|  |} | Null,   BorrowedAmount: Any,   HasOutstandingJudgement: Boolean,   HasDeclaredBankruptcy: Boolean,   HasUndisclAddlPropApp: Boolean,   HasUndisclAddlCreditApp: Boolean,   IsPartyToLawsuit: Boolean,   HasPropertyForeclosed: Boolean,   BankruptcyType: Any,   IsCoSignerUndisclDebt: Boolean|}>
+

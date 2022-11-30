@@ -1,0 +1,46 @@
+
+pdfgen:
+  clientId: "3c8f934f0c93e677d8f7167655d08f4617e4a1feec0a3a64b07b39f573277872"
+  clientSec: "3ba799e675778be800ca327f9cdaf2b4909c932b55385874756b15fc9f1dfbe7"
+  userId: "prakashsr.7725@gmail.com"  
+   
+   
+     
+salesforce:
+  username: "poojagbhat100199-hkjd@force.com"
+  password : "Nous@1234"
+  securitytoken: "wjT7lVJhzVxDEv2dF25qyYHV"
+  uploadurl: "http://salesforce-document-api.sg-s1.cloudhub.io/api/documents"
+  subcribertopic : "creditreportrequested"
+  aggregratorapiurl: "http://salesforce-aggregator-api.sg-s1.cloudhub.io/loanapplicant"
+    
+pdf:  
+  url: "http://pdf-generator-api.sg-s1.cloudhub.io/api/generate-pdf/"
+  
+  templateid: "479563"  
+  
+verification:
+  url: "http://lending-verification-api.sg-s1.cloudhub.io/v1/creditScore/{SSN}"
+  
+plaidaccelerator:
+  basePath: "api"
+  url: "plaid-accelerator-api.sg-s1.cloudhub.io"
+  path: "upload-document"
+  
+commsaccelerator:
+  url: "nous-comms-accelerator.sg-s1.cloudhub.io"
+  basePath: "api"
+  path: "comms/notify/email"
+  
+formsaccelerator:
+  url: "http://forms-accelerator-api.us-e2.cloudhub.io/api/nous/mulesoftforms/generate/{envelop-id}"
+  loanform: "4ae99116-f715-4775-b9e1-4fcd1248a7d3"
+  otpform: "be19126a-8376-4500-a462-9357ba6e75ba"
+  
+  
+  
+storage:
+  url: "salesforce-document-api.sg-s1.cloudhub.io"
+  basePath: "api"
+  path: "documents"
+  

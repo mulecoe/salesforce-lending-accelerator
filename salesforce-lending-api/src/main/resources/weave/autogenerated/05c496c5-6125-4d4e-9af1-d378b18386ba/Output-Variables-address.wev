@@ -1,0 +1,4 @@
+%dw 2.0
+
+type auto_05c496c5_6125_4d4e_9af1_d378b18386ba_Output_Variables_address = Array<{|  Name: Any,   LoanApplicationId: {|  |} | Null,   LoanApplicantId: {|  |} | Null,   ResidenceStreet: Any,   ResidenceCity: Any,   ResidenceState: Any,   ResidencePostalCode: Any,   Previous_Address__c: Any,   CorrespondenceAddress__c: Any,   Verification_Source__c: String,   Residence_Address_Verified__c: Boolean|}>
+
